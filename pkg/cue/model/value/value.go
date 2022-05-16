@@ -317,7 +317,7 @@ func (val *Value) LookupValue(paths ...string) (*Value, error) {
 func (val *Value) LookupByScript(script string) (*Value, error) {
 	var outputKey = "zz_output__"
 	script = strings.TrimSpace(script)
-	scriptFile, err := parser.ParseFile("-", script)
+	scriptFile, err := parser.ParseFile("-", script, parser.ParseComments)
 	if err != nil {
 		return nil, errors.WithMessage(err, "parse script")
 	}
@@ -327,7 +327,7 @@ func (val *Value) LookupByScript(script string) (*Value, error) {
 		return nil, err
 	}
 
-	rawFile, err := parser.ParseFile("-", raw)
+	rawFile, err := parser.ParseFile("-", raw, parser.ParseComments)
 	if err != nil {
 		return nil, errors.WithMessage(err, "parse script")
 	}
@@ -514,6 +514,17 @@ func (val *Value) GetString(paths ...string) (string, error) {
 		return "", err
 	}
 	return v.CueValue().String()
+}
+
+// GetStringSlice get string slice from val
+func (val *Value) GetStringSlice(paths ...string) ([]string, error) {
+	v, err := val.LookupValue(paths...)
+	if err != nil {
+		return nil, err
+	}
+	var s []string
+	err = v.UnmarshalTo(&s)
+	return s, err
 }
 
 // GetInt64 get the int value at a path starting from v.

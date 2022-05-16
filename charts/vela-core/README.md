@@ -1,18 +1,18 @@
 <div style="text-align: center">
   <p align="center">
-    <img src="https://raw.githubusercontent.com/oam-dev/kubevela.io/main/docs/resources/KubeVela-03.png">
+    <img src="https://raw.githubusercontent.com/kubevela/kubevela.io/main/docs/resources/KubeVela-03.png">
     <br><br>
     <i>Make shipping applications more enjoyable.</i>
   </p>
 </div>
 
-![Build status](https://github.com/oam-dev/kubevela/workflows/E2E/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/oam-dev/kubevela)](https://goreportcard.com/report/github.com/oam-dev/kubevela)
+![Build status](https://github.com/kubevela/kubevela/workflows/E2E/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kubevela/kubevela)](https://goreportcard.com/report/github.com/kubevela/kubevela)
 ![Docker Pulls](https://img.shields.io/docker/pulls/oamdev/vela-core)
-[![codecov](https://codecov.io/gh/oam-dev/kubevela/branch/master/graph/badge.svg)](https://codecov.io/gh/oam-dev/kubevela)
-[![LICENSE](https://img.shields.io/github/license/oam-dev/kubevela.svg?style=flat-square)](/LICENSE)
-[![Releases](https://img.shields.io/github/release/oam-dev/kubevela/all.svg?style=flat-square)](https://github.com/oam-dev/kubevela/releases)
-[![TODOs](https://img.shields.io/endpoint?url=https://api.tickgit.com/badge?repo=github.com/oam-dev/kubevela)](https://www.tickgit.com/browse?repo=github.com/oam-dev/kubevela)
+[![codecov](https://codecov.io/gh/kubevela/kubevela/branch/master/graph/badge.svg)](https://codecov.io/gh/kubevela/kubevela)
+[![LICENSE](https://img.shields.io/github/license/kubevela/kubevela.svg?style=flat-square)](/LICENSE)
+[![Releases](https://img.shields.io/github/release/kubevela/kubevela/all.svg?style=flat-square)](https://github.com/kubevela/kubevela/releases)
+[![TODOs](https://img.shields.io/endpoint?url=https://api.tickgit.com/badge?repo=github.com/kubevela/kubevela)](https://www.tickgit.com/browse?repo=github.com/oam-dev/kubevela)
 [![Twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2Foam_dev)](https://twitter.com/oam_dev)
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubevela)](https://artifacthub.io/packages/search?repo=kubevela)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/4602/badge)](https://bestpractices.coreinfrastructure.org/projects/4602)
@@ -82,7 +82,7 @@ helm install --create-namespace -n vela-system kubevela kubevela/vela-core --wai
 
 | Name                                              | Description                                                                                                                                       | Value   |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `optimize.optimizeCachedGvks`                     | Optimize types of resources to be cached.                                                                                                         | `nil`   |
+| `optimize.cachedGvks`                             | Optimize types of resources to be cached.                                                                                                         | `""`    |
 | `optimize.resourceTrackerListOp`                  | Optimize ResourceTracker List Op by adding index.                                                                                                 | `true`  |
 | `optimize.controllerReconcileLoopReduction`       | Optimize ApplicationController reconcile by reducing the number of loops to reconcile application.                                                | `false` |
 | `optimize.markWithProb`                           | Optimize ResourceTracker GC by only run mark with probability. Side effect: outdated ResourceTracker might not be able to be removed immediately. | `0.1`   |
@@ -96,18 +96,20 @@ helm install --create-namespace -n vela-system kubevela kubevela/vela-core --wai
 
 ### MultiCluster parameters
 
-| Name                                                  | Description                      | Value                            |
-| ----------------------------------------------------- | -------------------------------- | -------------------------------- |
-| `multicluster.enabled`                                | Whether to enable multi-cluster  | `true`                           |
-| `multicluster.clusterGateway.replicaCount`            | ClusterGateway replica count     | `1`                              |
-| `multicluster.clusterGateway.port`                    | ClusterGateway port              | `9443`                           |
-| `multicluster.clusterGateway.image.repository`        | ClusterGateway image repository  | `oamdev/cluster-gateway`         |
-| `multicluster.clusterGateway.image.tag`               | ClusterGateway image tag         | `v1.3.2`                         |
-| `multicluster.clusterGateway.image.pullPolicy`        | ClusterGateway image pull policy | `IfNotPresent`                   |
-| `multicluster.clusterGateway.resources.limits.cpu`    | ClusterGateway cpu limit         | `100m`                           |
-| `multicluster.clusterGateway.resources.limits.memory` | ClusterGateway memory limit      | `200Mi`                          |
-| `multicluster.clusterGateway.secureTLS.enabled`       | Whether to enable secure TLS     | `true`                           |
-| `multicluster.clusterGateway.secureTLS.certPath`      | Path to the certificate file     | `/etc/k8s-cluster-gateway-certs` |
+| Name                                                        | Description                                     | Value                            |
+| ----------------------------------------------------------- | ----------------------------------------------- | -------------------------------- |
+| `multicluster.enabled`                                      | Whether to enable multi-cluster                 | `true`                           |
+| `multicluster.metrics.enabled`                              | Whether to enable multi-cluster metrics collect | `false`                          |
+| `multicluster.clusterGateway.replicaCount`                  | ClusterGateway replica count                    | `1`                              |
+| `multicluster.clusterGateway.port`                          | ClusterGateway port                             | `9443`                           |
+| `multicluster.clusterGateway.image.repository`              | ClusterGateway image repository                 | `oamdev/cluster-gateway`         |
+| `multicluster.clusterGateway.image.tag`                     | ClusterGateway image tag                        | `v1.3.2`                         |
+| `multicluster.clusterGateway.image.pullPolicy`              | ClusterGateway image pull policy                | `IfNotPresent`                   |
+| `multicluster.clusterGateway.resources.limits.cpu`          | ClusterGateway cpu limit                        | `100m`                           |
+| `multicluster.clusterGateway.resources.limits.memory`       | ClusterGateway memory limit                     | `200Mi`                          |
+| `multicluster.clusterGateway.secureTLS.enabled`             | Whether to enable secure TLS                    | `true`                           |
+| `multicluster.clusterGateway.secureTLS.certPath`            | Path to the certificate file                    | `/etc/k8s-cluster-gateway-certs` |
+| `multicluster.clusterGateway.secureTLS.certManager.enabled` | Whether to enable cert-manager                  | `false`                          |
 
 
 ### Test parameters

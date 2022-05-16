@@ -87,14 +87,14 @@ func (u *userUsecaseImpl) Init(ctx context.Context) error {
 			}
 			if err := u.ds.Add(ctx, &model.User{
 				Name:      admin,
-				Alias:     "Administrator",
+				Alias:     model.DefaultAdminUserAlias,
 				Password:  encrypted,
 				UserRoles: []string{"admin"},
 			}); err != nil {
 				return err
 			}
 			// print default password of admin user in log
-			log.Logger.Infof("initialized admin username and password: admin / %s\n", initAdminPassword)
+			log.Logger.Infof("initialized admin username and password: admin / %s", initAdminPassword)
 		} else {
 			return err
 		}

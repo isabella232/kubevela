@@ -26,14 +26,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	version2 "github.com/oam-dev/kubevela/version"
-
 	"github.com/crossplane/crossplane-runtime/pkg/test"
 	"github.com/google/go-github/v32/github"
-	v1alpha12 "github.com/oam-dev/cluster-gateway/pkg/apis/cluster/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,9 +41,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1alpha12 "github.com/oam-dev/cluster-gateway/pkg/apis/cluster/v1alpha1"
+	clustercommon "github.com/oam-dev/cluster-gateway/pkg/common"
+
 	"github.com/oam-dev/kubevela/apis/core.oam.dev/common"
 	"github.com/oam-dev/kubevela/apis/core.oam.dev/v1beta1"
 	"github.com/oam-dev/kubevela/apis/types"
+	version2 "github.com/oam-dev/kubevela/version"
 )
 
 var paths = []string{
@@ -402,7 +404,7 @@ func TestGetAddonStatus4Observability(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-secret",
 			Labels: map[string]string{
-				v1alpha12.LabelKeyClusterCredentialType: string(v1alpha12.CredentialTypeX509Certificate),
+				clustercommon.LabelKeyClusterCredentialType: string(v1alpha12.CredentialTypeX509Certificate),
 			},
 		},
 		Data: map[string][]byte{
@@ -577,7 +579,7 @@ func TestRenderApp4ObservabilityWithK8sData(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-secret",
 			Labels: map[string]string{
-				v1alpha12.LabelKeyClusterCredentialType: string(v1alpha12.CredentialTypeX509Certificate),
+				clustercommon.LabelKeyClusterCredentialType: string(v1alpha12.CredentialTypeX509Certificate),
 			},
 		},
 		Data: map[string][]byte{
@@ -905,4 +907,24 @@ func TestCheckEnableAddonErrorWhenMissMatch(t *testing.T) {
 	installer := &Installer{}
 	err := installer.enableAddon(&i)
 	assert.Equal(t, errors.As(err, &VersionUnMatchError{}), true)
+}
+
+func TestPackageAddon(t *testing.T) {
+	pwd, _ := os.Getwd()
+
+	validAddonDict := "./testdata/example"
+	archiver, err := PackageAddon(validAddonDict)
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(pwd, "example-1.0.1.tgz"), archiver)
+
+	invalidAddonDict := "./testdata"
+	archiver, err = PackageAddon(invalidAddonDict)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", archiver)
+
+	invalidAddonMetadata := "./testdata/invalid-metadata"
+	archiver, err = PackageAddon(invalidAddonMetadata)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", archiver)
+
 }

@@ -27,7 +27,7 @@ import (
 	"cuelang.org/go/cue/format"
 	json2cue "cuelang.org/go/encoding/json"
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
-	terraformapi "github.com/oam-dev/terraform-controller/api/v1beta1"
+	terraformapi "github.com/oam-dev/terraform-controller/api/v1beta2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +43,7 @@ import (
 	"github.com/oam-dev/kubevela/apis/types"
 	"github.com/oam-dev/kubevela/pkg/appfile/helm"
 	velaclient "github.com/oam-dev/kubevela/pkg/client"
+	"github.com/oam-dev/kubevela/pkg/component"
 	"github.com/oam-dev/kubevela/pkg/cue/definition"
 	"github.com/oam-dev/kubevela/pkg/cue/model"
 	"github.com/oam-dev/kubevela/pkg/cue/model/value"
@@ -63,7 +64,9 @@ const (
 	// WriteConnectionSecretToRefKey is used to create a secret for cloud resource connection
 	WriteConnectionSecretToRefKey = "writeConnectionSecretToRef"
 	// RegionKey is the region of a Cloud Provider
-	RegionKey = "region"
+	// It's used to override the region of a Cloud Provider
+	// Refer to https://github.com/oam-dev/terraform-controller/blob/master/api/v1beta2/configuration_types.go#L66 for details
+	RegionKey = "customRegion"
 	// ProviderRefKey is the reference of a Provider
 	ProviderRefKey = "providerRef"
 )
@@ -668,7 +671,7 @@ func generateTerraformConfigurationWorkload(wl *Workload, ns string) (*unstructu
 	}
 
 	configuration := terraformapi.Configuration{
-		TypeMeta: metav1.TypeMeta{APIVersion: "terraform.core.oam.dev/v1beta1", Kind: "Configuration"},
+		TypeMeta: metav1.TypeMeta{APIVersion: "terraform.core.oam.dev/v1beta2", Kind: "Configuration"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      wl.Name,
 			Namespace: ns,
@@ -681,8 +684,6 @@ func generateTerraformConfigurationWorkload(wl *Workload, ns string) (*unstructu
 	switch wl.FullTemplate.Terraform.Type {
 	case "hcl":
 		configuration.Spec.HCL = wl.FullTemplate.Terraform.Configuration
-	case "json":
-		configuration.Spec.JSON = wl.FullTemplate.Terraform.Configuration
 	case "remote":
 		configuration.Spec.Remote = wl.FullTemplate.Terraform.Configuration
 		configuration.Spec.Path = wl.FullTemplate.Terraform.Path
@@ -916,4 +917,34 @@ func (af *Appfile) PolicyClient(cli client.Client) client.Client {
 			return cli.Get(ctx, key, obj)
 		},
 	}
+}
+
+// LoadDynamicComponent for ref-objects typed components, this function will load referred objects from stored revisions
+func (af *Appfile) LoadDynamicComponent(ctx context.Context, cli client.Client, comp *common.ApplicationComponent) (*common.ApplicationComponent, error) {
+	if comp.Type != v1alpha1.RefObjectsComponentType {
+		return comp, nil
+	}
+	_comp := comp.DeepCopy()
+	spec := &v1alpha1.RefObjectsComponentSpec{}
+	if err := json.Unmarshal(comp.Properties.Raw, spec); err != nil {
+		return nil, errors.Wrapf(err, "invalid ref-objects component properties")
+	}
+	var uns []*unstructured.Unstructured
+	for _, selector := range spec.Objects {
+		objs, err := component.SelectRefObjectsForDispatch(ctx, component.ReferredObjectsDelegatingClient(cli, af.ReferredObjects), af.Namespace, comp.Name, selector)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to select objects from referred objects in revision storage")
+		}
+		uns = component.AppendUnstructuredObjects(uns, objs...)
+	}
+	refObjs, err := component.ConvertUnstructuredsToReferredObjects(uns)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal referred object")
+	}
+	bs, err := json.Marshal(&common.ReferredObjectList{Objects: refObjs})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal loaded ref-objects")
+	}
+	_comp.Properties = &runtime.RawExtension{Raw: bs}
+	return _comp, nil
 }
