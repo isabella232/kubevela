@@ -322,6 +322,18 @@ func TestGetAddonStatus(t *testing.T) {
 			app := &v1beta1.Application{}
 			app.Status.Phase = common.ApplicationDeleting
 			*o = *app
+		case "addon-secret-enabled":
+			o := obj.(*corev1.Secret)
+			secret := &corev1.Secret{}
+			secret.Data = map[string][]byte{
+				"some-key": []byte("some-value"),
+			}
+			*o = *secret
+		case "addon-secret-disabling", "addon-secret-enabling":
+			o := obj.(*corev1.Secret)
+			secret := &corev1.Secret{}
+			secret.Data = map[string][]byte{}
+			*o = *secret
 		default:
 			o := obj.(*v1beta1.Application)
 			app := &v1beta1.Application{}
@@ -336,8 +348,9 @@ func TestGetAddonStatus(t *testing.T) {
 	}
 
 	cases := []struct {
-		name         string
-		expectStatus string
+		name               string
+		expectStatus       string
+		expectedParameters map[string]interface{}
 	}{
 		{
 			name: "disabled", expectStatus: "disabled",
@@ -744,6 +757,11 @@ func TestCheckSemVer(t *testing.T) {
 			actual:  "1.2.3",
 			require: ">=v1.3.0-alpha.1",
 			res:     false,
+		},
+		{
+			actual:  "v1.4.0-alpha.3",
+			require: ">=v1.3.0-beta.2",
+			res:     true,
 		},
 	}
 	for _, testCase := range testCases {

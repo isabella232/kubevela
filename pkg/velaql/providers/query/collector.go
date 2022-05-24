@@ -90,20 +90,21 @@ func (c *AppCollector) CollectResourceFromApp() ([]Resource, error) {
 }
 
 // ListApplicationResources list application applied resources from tracker
-func (c *AppCollector) ListApplicationResources(app *v1beta1.Application) ([]types.AppliedResource, error) {
+func (c *AppCollector) ListApplicationResources(app *v1beta1.Application) ([]*types.AppliedResource, error) {
 	ctx := context.Background()
 	rootRT, currentRT, historyRTs, _, err := resourcetracker.ListApplicationResourceTrackers(ctx, c.k8sClient, app)
 	if err != nil {
 		return nil, err
 	}
 
-	var managedResources []types.AppliedResource
+	var managedResources []*types.AppliedResource
 	for _, rt := range append(historyRTs, rootRT, currentRT) {
 		if rt != nil {
 			for _, managedResource := range rt.Spec.ManagedResources {
 				if isResourceInTargetCluster(c.opt.Filter, managedResource.ClusterObjectReference) &&
-					isResourceInTargetComponent(c.opt.Filter, managedResource.Component) {
-					managedResources = append(managedResources, types.AppliedResource{
+					isResourceInTargetComponent(c.opt.Filter, managedResource.Component) &&
+					isResourceMatchKindAndVersion(c.opt.Filter, managedResource.Kind, managedResource.APIVersion) {
+					managedResources = append(managedResources, &types.AppliedResource{
 						Cluster:         managedResource.Cluster,
 						Kind:            managedResource.Kind,
 						Component:       managedResource.Component,
@@ -145,14 +146,16 @@ func (c *AppCollector) FindResourceFromResourceTrackerSpec(app *v1beta1.Applicat
 		if rt != nil {
 			for _, managedResource := range rt.Spec.ManagedResources {
 				if isResourceInTargetCluster(c.opt.Filter, managedResource.ClusterObjectReference) &&
-					isResourceInTargetComponent(c.opt.Filter, managedResource.Component) {
+					isResourceInTargetComponent(c.opt.Filter, managedResource.Component) &&
+					isResourceMatchKindAndVersion(c.opt.Filter, managedResource.Kind, managedResource.APIVersion) {
 					if _, exist := existResources[managedResource.ClusterObjectReference]; exist {
 						continue
 					}
 					existResources[managedResource.ClusterObjectReference] = true
 					obj, err := managedResource.ToUnstructuredWithData()
-					if err != nil {
+					if err != nil || c.opt.WithStatus {
 						// For the application with apply once policy, there is no data in RT.
+						// IF the WithStatus is true, get the object from cluster
 						_, obj, err = getObjectCreatedByComponent(c.k8sClient, managedResource.ObjectReference, managedResource.Cluster)
 						if err != nil {
 							klog.Errorf("get obj from the cluster failure %s", err.Error())
@@ -181,6 +184,9 @@ func (c *AppCollector) FindResourceFromAppliedResourcesField(app *v1beta1.Applic
 	resources := make([]Resource, 0, len(app.Spec.Components))
 	for _, res := range app.Status.AppliedResources {
 		if !isResourceInTargetCluster(c.opt.Filter, res) {
+			continue
+		}
+		if !isResourceMatchKindAndVersion(c.opt.Filter, res.APIVersion, res.Kind) {
 			continue
 		}
 		compName, obj, err := getObjectCreatedByComponent(c.k8sClient, res.ObjectReference, res.Cluster)
@@ -517,4 +523,14 @@ func isResourceInTargetComponent(opt FilterOption, componentName string) bool {
 		}
 	}
 	return false
+}
+
+func isResourceMatchKindAndVersion(opt FilterOption, kind, version string) bool {
+	if opt.APIVersion != "" && opt.APIVersion != version {
+		return false
+	}
+	if opt.Kind != "" && opt.Kind != kind {
+		return false
+	}
+	return true
 }
